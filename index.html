@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#08090a">
+  <meta name="description" content="Xdigitex Trade pooled investment operations console">
+  <title>Xdigitex Trade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="login-view" class="login-shell hidden">
+    <section class="login-card">
+      <div class="brand-lockup"><span class="brand-mark">X</span><span>xdigitex<span class="brand-light">trade</span></span></div>
+      <p class="eyebrow">POOL OPERATIONS PLATFORM</p>
+      <h1>Sign in to your account</h1>
+      <p class="muted">Access is tied to an individual account. New accounts remain pending identity review.</p>
+      <form id="login-form" class="form-stack">
+        <label>Email address<input name="email" type="email" autocomplete="username" required></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" required minlength="12"></label>
+        <button class="button button-primary" type="submit">Sign in <span>→</span></button>
+      </form>
+      <div class="login-divider"><span>NEW TO XDIGITEX TRADE?</span></div>
+      <button id="show-register" class="button button-secondary full-width">Create an account</button>
+      <p id="login-message" class="form-message" aria-live="polite"></p>
+      <p class="microcopy">Never share your password, broker credentials, or API secrets with support staff.</p>
+    </section>
+  </div>
+  <div id="register-view" class="login-shell hidden">
+    <section class="login-card">
+      <div class="brand-lockup"><span class="brand-mark">X</span><span>xdigitex<span class="brand-light">trade</span></span></div>
+      <p class="eyebrow">CREATE YOUR PROFILE</p>
+      <h1>Start with identity review</h1>
+      <p class="muted">Registration does not accept funds or activate trading. Identity and eligibility checks are reviewed before account access is enabled.</p>
+      <form id="register-form" class="form-stack">
+        <label>Full name<input name="name" autocomplete="name" required minlength="2"></label>
+        <label>Email address<input name="email" type="email" autocomplete="email" required></label>
+        <label>Password<input name="password" type="password" autocomplete="new-password" required minlength="12"><small>Use at least 12 characters.</small></label>
+        <label class="check-row"><input name="terms" type="checkbox" required><span>I understand that trading can lose money and returns are not guaranteed. Deposits and withdrawals use Xdigitex Pay when configured; live trading is currently disabled.</span></label>
+        <button class="button button-primary" type="submit">Create account <span>→</span></button>
+      </form>
+      <button id="show-login" class="text-button">Already registered? Sign in</button>
+      <p id="register-message" class="form-message" aria-live="polite"></p>
+    </section>
+  </div>
+
+  <div id="app-view" class="app-shell hidden">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-lockup"><span class="brand-mark">X</span><span>xdigitex<span class="brand-light">trade</span></span></div>
+      <div class="workspace-chip"><span class="status-dot status-dot-amber"></span><span>POOL OPERATIONS</span></div>
+      <nav class="nav-list" aria-label="Main navigation">
+        <p class="nav-caption">ACCOUNTS</p>
+        <button class="nav-item active" data-page="overview"><span class="nav-icon">▦</span> My Accounts</button>
+        <button class="nav-item" data-action="deposit"><span class="nav-icon">↧</span> Deposit</button>
+        <button class="nav-item" data-action="withdraw"><span class="nav-icon">↥</span> Withdrawal</button>
+        <button class="nav-item" data-page="activity"><span class="nav-icon">◷</span> Transactions</button>
+        <p class="nav-caption nav-caption-spaced">TRADING</p>
+        <button class="nav-item" data-page="trading"><span class="nav-icon">⌁</span> Trade Terminal</button>
+        <button class="nav-item" data-page="portfolio"><span class="nav-icon">◫</span> Performance</button>
+        <button class="nav-item nav-soon" type="button" disabled><span class="nav-icon">⧉</span> Copy Trade <span class="nav-soon-tag">SOON</span></button>
+        <div id="admin-nav" class="hidden">
+          <p class="nav-caption nav-caption-spaced">OPERATIONS</p>
+          <button class="nav-item" data-page="investors"><span class="nav-icon">♙</span> Investors & KYC</button>
+          <button class="nav-item" data-page="requests"><span class="nav-icon">⇄</span> Review requests</button>
+          <button class="nav-item" data-page="trading"><span class="nav-icon">⌁</span> Provider status</button>
+          <button class="nav-item" data-page="audit"><span class="nav-icon">▤</span> Audit trail</button>
+        </div>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="side-status-card"><span class="eyebrow">SYSTEM STATUS</span><div class="side-status-line"><span class="status-dot status-dot-red"></span><strong>Live trading disabled</strong></div><span class="microcopy">Broker connection required</span></div>
+        <div class="user-mini"><span id="user-avatar" class="avatar">X</span><span class="user-mini-copy"><strong id="user-name">Account</strong><small id="user-role">Investor</small></span><button id="logout-button" class="icon-button" title="Sign out" aria-label="Sign out">↗</button></div>
+      </div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar"><button id="menu-toggle" class="icon-button menu-toggle" aria-label="Open menu">☰</button><div class="breadcrumbs"><span>Xdigitex Trade</span><b>/</b><strong id="page-title">Overview</strong></div><div class="topbar-right"><span class="environment-pill"><i></i> TRADING DISABLED</span><button class="icon-button notification-button" aria-label="Notifications">♧<span></span></button></div></header>
+      <div class="content-wrap">
+        <div id="alert-banner" class="alert-banner alert-warning"><span class="alert-icon">!</span><div><strong>Trading is not enabled yet</strong><p>Xdigitex Pay deposit and mobile-money payout requests use the provider API when merchant credentials are configured. A request remains pending until provider status confirms it. Broker trading and performance reporting are not connected.</p></div></div>
+        <section id="page-overview" class="page-section">
+          <div class="page-heading"><div><p class="eyebrow">YOUR TRADING PROFILE</p><h1>My Accounts</h1><p class="muted">Your membership in the Xdigitex managed pool and the connected provider state.</p></div><div class="heading-actions"><button class="button button-secondary" data-action="deposit">＋ Deposit</button><button class="button button-primary" data-action="withdraw">Withdraw <span>→</span></button></div></div>
+          <div id="kyc-notice" class="kyc-notice"><div class="kyc-symbol">ID</div><div><strong>Identity review pending</strong><p>Your account remains restricted until the operations team completes eligibility and identity checks.</p></div><span class="pill pill-amber">PENDING</span></div>
+          <div class="pool-notice"><span class="pool-pulse"></span><div><strong>Xdigitex Pool</strong><span id="provider-summary">Broker provider connection not configured</span></div><span id="pool-member-id" class="pool-member-id">POOL MEMBER</span></div>
+          <div class="metric-grid account-metrics">
+            <article class="metric-card metric-highlight"><div class="metric-top"><span>Pool ledger balance</span><span class="metric-symbol">◉</span></div><strong id="my-balance" class="metric-value">—</strong><div class="metric-foot"><span class="metric-note">Xdigitex Pay-confirmed customer ledger</span></div></article>
+            <article class="metric-card"><div class="metric-top"><span>Lots traded</span><span class="metric-symbol">⌁</span></div><strong id="lots-traded" class="metric-value metric-muted">—</strong><div class="metric-foot"><span class="metric-note">Awaiting provider feed</span></div></article>
+            <article class="metric-card"><div class="metric-top"><span>Closed trades</span><span class="metric-symbol">◷</span></div><strong id="closed-trades" class="metric-value metric-muted">—</strong><div class="metric-foot"><span class="metric-note">Awaiting provider feed</span></div></article>
+          </div>
+          <section class="panel accounts-panel"><div class="accounts-heading"><div><p class="eyebrow">ACCOUNT VIEW</p><h2>Pool account</h2></div><button class="button button-secondary" data-action="pool-details">Pool details <span>⌄</span></button></div><div class="account-controls"><div class="account-filters" role="group" aria-label="Filter account mode"><button class="active" data-account-filter="all">All</button><button data-account-filter="real">Real</button><button data-account-filter="demo">Demo</button></div><div class="account-display-controls"><button class="active" data-account-layout="list" aria-label="List layout">☷</button><button data-account-layout="grid" aria-label="Grid layout">▦</button></div></div><div id="account-list" class="account-list"></div></section>
+          <div id="admin-overview" class="hidden">
+            <div class="section-heading"><div><p class="eyebrow">ADMIN OPERATIONS</p><h2>Pool overview</h2></div><span class="data-source-tag">LEDGER TOTALS · NOT BROKER EQUITY</span></div>
+            <div class="metric-grid admin-metrics">
+              <article class="metric-card"><div class="metric-top"><span>Registered accounts</span><span class="metric-symbol">♙</span></div><strong id="admin-users" class="metric-value">—</strong><div class="metric-foot"><span class="metric-note">Includes pending identity reviews</span></div></article>
+              <article class="metric-card"><div class="metric-top"><span>Confirmed contributions</span><span class="metric-symbol">↧</span></div><strong id="pool-contributions" class="metric-value">—</strong><div class="metric-foot"><span class="metric-note">Ledger total; reconcile with custodian</span></div></article>
+              <article class="metric-card"><div class="metric-top"><span>Withdrawal requests</span><span class="metric-symbol">↥</span></div><strong id="admin-pending-withdrawals" class="metric-value">—</strong><div class="metric-foot"><span class="metric-note">Requires review and liquidity check</span></div></article>
+              <article class="metric-card"><div class="metric-top"><span>Live trades</span><span class="metric-symbol">⌁</span></div><strong class="metric-value metric-muted">Disabled</strong><div class="metric-foot"><span class="metric-note">No broker execution configured</span></div></article>
+            </div>
+          </div>
+          <div class="two-column-grid">
+            <section class="panel"><div class="panel-heading"><div><p class="eyebrow">RECENT RECORDS</p><h2>Account activity</h2></div><button class="text-button" data-goto="activity">View all</button></div><div id="recent-activity" class="activity-list"></div></section>
+            <section class="panel"><div class="panel-heading"><div><p class="eyebrow">POOL CONNECTIONS</p><h2>Pool &amp; provider status</h2></div><span class="data-source-tag">LIVE CONFIGURATION</span></div><div id="overview-integrations" class="readiness-list"></div></section>
+          </div>
+          <section id="admin-queue-panel" class="panel hidden"><div class="panel-heading"><div><p class="eyebrow">NEEDS ATTENTION</p><h2>Operations queue</h2></div><button class="text-button" data-goto="requests">Open queue →</button></div><div id="queue-summary" class="queue-summary"></div></section>
+        </section>
+        <section id="page-portfolio" class="page-section hidden"><div class="page-heading"><div><p class="eyebrow">ACCOUNT TRANSPARENCY</p><h1>My portfolio</h1><p class="muted">Confirmed contributions and withdrawals from your account ledger.</p></div></div><div class="alert-banner alert-info"><span class="alert-icon">i</span><div><strong>Pool units and performance are not shown yet</strong><p>Performance reporting requires verified broker equity, a documented unit-allocation policy, and reconciliation. No investment return is estimated here.</p></div></div><div class="metric-grid"><article class="metric-card"><div class="metric-top"><span>Confirmed deposits</span></div><strong id="portfolio-deposits" class="metric-value">—</strong></article><article class="metric-card"><div class="metric-top"><span>Confirmed withdrawals</span></div><strong id="portfolio-withdrawals" class="metric-value">—</strong></article><article class="metric-card"><div class="metric-top"><span>Net ledger balance</span></div><strong id="portfolio-balance" class="metric-value">—</strong></article></div><section class="panel"><div class="panel-heading"><div><p class="eyebrow">LEDGER</p><h2>Confirmed entries</h2></div><span class="data-source-tag">IMMUTABLE RECORD VIEW</span></div><div id="ledger-table" class="table-wrap"></div></section></section>
+        <section id="page-funding" class="page-section hidden"><div class="page-heading"><div><p class="eyebrow">CASH OPERATIONS</p><h1>Deposits &amp; withdrawals</h1><p class="muted">Payments and payouts are initiated through Xdigitex Pay and reconciled against its provider status.</p></div></div><div class="funding-actions"><article class="action-card"><div class="action-icon">↧</div><div><h2>Deposit with Xdigitex Pay</h2><p>Choose a supported currency and payment method. Provider status controls when funds enter your ledger.</p></div><button class="button button-secondary" data-action="deposit">Add deposit request</button></article><article class="action-card"><div class="action-icon">↥</div><div><h2>Withdraw through Xdigitex Pay</h2><p>Send a supported currency to a mobile money number and track provider confirmation.</p></div><button class="button button-primary" data-action="withdraw">Request withdrawal</button></article></div><section class="panel"><div class="panel-heading"><div><p class="eyebrow">REQUEST HISTORY</p><h2>Your funding requests</h2></div></div><div id="funding-requests-table" class="table-wrap"></div></section></section>
+        <section id="page-activity" class="page-section hidden"><div class="page-heading"><div><p class="eyebrow">ACCOUNT RECORDS</p><h1>Activity</h1><p class="muted">Request history and confirmed ledger events.</p></div></div><section class="panel"><div id="activity-table" class="table-wrap"></div></section></section>
+        <section id="page-investors" class="page-section hidden"><div class="page-heading"><div><p class="eyebrow">CLIENT DUE DILIGENCE</p><h1>Investors &amp; KYC</h1><p class="muted">Manual identity-review queue. No identity provider is connected.</p></div></div><section class="panel"><div id="investors-table" class="table-wrap"></div></section></section>
+        <section id="page-requests" class="page-section hidden"><div class="page-heading"><div><p class="eyebrow">CASH OPERATIONS</p><h1>Review requests</h1><p class="muted">Refresh provider status to reconcile deposits and withdrawals.</p></div></div><div class="alert-banner alert-warning"><span class="alert-icon">!</span><div><strong>Only provider status can settle a payment</strong><p>Refresh requests against Xdigitex Pay. Deposit credits use the provider reported net amount; withdrawal debits use the confirmed payout and provider fee.</p></div></div><section class="panel"><div class="panel-heading"><div><p class="eyebrow">DEPOSITS</p><h2>Pending verification</h2></div></div><div id="admin-deposits-table" class="table-wrap"></div></section><section class="panel"><div class="panel-heading"><div><p class="eyebrow">WITHDRAWALS</p><h2>Pending review</h2></div></div><div id="admin-withdrawals-table" class="table-wrap"></div></section></section>
+        <section id="page-trading" class="page-section hidden"><div class="page-heading"><div><p class="eyebrow">PROVIDER TERMINAL</p><h1>Trade Terminal</h1><p class="muted">Market data and orders will come directly from the connected Xdigitex pool provider.</p></div><span class="pill pill-red">PROVIDER OFFLINE</span></div><div class="alert-banner alert-warning"><span class="alert-icon">!</span><div><strong>No broker feed is connected</strong><p>The pool balance above comes from verified payment ledger entries. It is not broker equity. This terminal will show live prices and positions only after an organization-owned pooled account is connected; it will not display sample candles or route orders to a personal account.</p></div></div><div class="terminal-toolbar"><div class="terminal-symbol"><span class="terminal-dot"></span><strong>Provider connection</strong><small>MT5 · Not configured</small></div><div class="terminal-periods"><button class="active" disabled>M1</button><button disabled>M5</button><button disabled>M15</button><button disabled>H1</button><button disabled>H4</button></div><span class="data-source-tag">NO LIVE MARKET DATA</span></div><div class="terminal-chart"><div class="terminal-grid"></div><div class="terminal-empty"><span>⌁</span><strong>Waiting for provider connection</strong><p>No market prices, chart bars, equity, or positions have been received.</p></div></div><div class="terminal-footer"><span>Balance <strong>Unavailable</strong></span><span>Equity <strong>Unavailable</strong></span><span>Free margin <strong>Unavailable</strong></span><button class="button button-primary" disabled>Place order</button></div><section id="provider-checklist" class="panel"><div class="panel-heading"><div><p class="eyebrow">POOL INFRASTRUCTURE</p><h2>Provider readiness</h2></div><span class="data-source-tag">ORGANIZATION-OWNED ACCOUNT</span></div><div id="integration-checklist" class="readiness-list"></div></section></section>
+        <section id="page-audit" class="page-section hidden"><div class="page-heading"><div><p class="eyebrow">CONTROL EVIDENCE</p><h1>Audit trail</h1><p class="muted">Time-stamped records of account, ledger, and operations changes.</p></div></div><section class="panel"><div id="audit-table" class="table-wrap"></div></section></section>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="request-dialog" class="modal"><form id="request-form" method="dialog"><div class="modal-heading"><div><p id="request-eyebrow" class="eyebrow">CASH REQUEST</p><h2 id="request-title">Request</h2></div><button type="button" class="icon-button" data-close-dialog aria-label="Close">×</button></div><fieldset id="deposit-fields" class="form-stack hidden"><label>Amount<input name="deposit_amount" type="number" min="0.01" step="0.01" required></label><label>Currency<select name="deposit_currency"><option>KES</option><option>USD</option><option>CDF</option><option>UGX</option><option>XOF</option><option>XAF</option><option>RWF</option><option>ZMW</option><option>SLE</option><option>USDT</option><option>BTC</option><option>ETH</option><option>BNB</option></select></label><label>Payment method<select name="gateway"><option value="mobile">Pan-Africa Mobile Money</option><option value="card">Visa / Mastercard</option><option value="crypto">Cryptocurrency</option><option value="safaricom">M-Pesa Kenya</option><option value="airtel">Airtel Money Kenya</option></select></label><label data-phone-label>Phone number<input name="deposit_phone" type="tel" placeholder="+254712345678"></label><p class="microcopy">Mobile money displays a payment prompt on your phone. Card and crypto use Xdigitex Pay hosted checkout. Your account is credited only after provider status confirms settlement.</p></fieldset><fieldset id="withdraw-fields" class="form-stack hidden"><label>Amount<input name="withdraw_amount" type="number" min="0.01" step="0.01" required></label><label>Currency<select name="withdraw_currency"><option>KES</option><option>CDF</option><option>UGX</option><option>XOF</option><option>XAF</option><option>RWF</option><option>ZMW</option><option>SLE</option></select></label><label>Mobile money number<input name="withdraw_phone" type="tel" placeholder="+254712345678" required></label><p class="microcopy">The payout is submitted to Xdigitex Pay and stays pending until its withdrawal history confirms a final status. The provider-reported fee is recorded with the result.</p></fieldset><p id="request-message" class="form-message" aria-live="polite"></p><div class="modal-actions"><button type="button" class="button button-secondary" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">Submit request <span>→</span></button></div></form></dialog>
+
+  <dialog id="pool-details-dialog" class="modal"><div class="modal-heading"><div><p class="eyebrow">POOL MODEL</p><h2>Xdigitex Managed Pool</h2></div><button type="button" class="icon-button" data-close-pool aria-label="Close">×</button></div><div class="pool-detail-list"><div><span>Member balance</span><strong>Payment-provider confirmed ledger</strong></div><div><span>Trading provider</span><strong>MT5 connection not configured</strong></div><div><span>Broker account</span><strong>Organization-owned pooled account only</strong></div><div><span>Trading activity</span><strong>Unavailable until provider data is connected</strong></div></div><p class="microcopy">This view keeps the customer ledger and the broker provider account separate. It does not treat deposits as broker equity or create individual broker logins.</p><div class="modal-actions"><button type="button" class="button button-primary" data-close-pool>Done</button></div></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>
