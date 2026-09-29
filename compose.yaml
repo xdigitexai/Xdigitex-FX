@@ -12,6 +12,8 @@ services:
       XDIGITEX_PAY_API_KEY: "${XDIGITEX_PAY_API_KEY:-}"
       XDIGITEX_PAY_BASE_URL: "${XDIGITEX_PAY_BASE_URL:-https://pay.xdigitex.space/api}"
       PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-}"
+      TWELVE_DATA_API_KEY: "${TWELVE_DATA_API_KEY:-}"
+      MARKET_DATA_CACHE_SECONDS: "${MARKET_DATA_CACHE_SECONDS:-600}"
     volumes:
       - trade-data:/var/lib/xdigitex-trade
     read_only: true

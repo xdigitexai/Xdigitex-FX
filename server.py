@@ -10,6 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 from xpay import XDigitexPay, XPayError
+from marketdata import get_quotes, is_configured as market_data_configured
 
 ROOT=Path(__file__).resolve().parent
 DATA_DIR=Path(os.environ.get("DATA_DIR",ROOT/"data")).resolve()
@@ -84,7 +85,8 @@ def money_map(m):return " · ".join(f"{k} {v:,.{SUPPORTED_CURRENCIES.get(k,2)}f}
 def pay_api():return XDigitexPay()
 def integration_status():
     configured=pay_api().ready
-    return [{"name":"broker","label":"Pooled broker provider","connected":False,"detail":f"{os.environ.get('BROKER_PROVIDER_LABEL','MT5')} is not connected. Use an organization-owned pool account; personal broker accounts are not used."},{"name":"xdigitex_pay","label":"Xdigitex Pay deposits and withdrawals","connected":configured,"detail":"Merchant key and public HTTPS callback are configured; verify connectivity with a real provider request." if configured else "Set XDIGITEX_PAY_API_KEY and PUBLIC_BASE_URL on the server."},{"name":"identity","label":"Identity verification provider","connected":False,"detail":"Manual review only; no KYC vendor connected."}]
+    market_configured=market_data_configured()
+    return [{"name":"market_data","label":"Read-only FX market prices","connected":market_configured,"detail":"Twelve Data key configured; prices are references only and do not execute trades." if market_configured else "Optional: set TWELVE_DATA_API_KEY on the server to show read-only FX prices."},{"name":"pool_execution","label":"Xdigitex internal pool","connected":False,"detail":"Internal order execution, member units, and settlement rules are not implemented; trading stays disabled."},{"name":"xdigitex_pay","label":"Xdigitex Pay deposits and withdrawals","connected":configured,"detail":"Merchant key and public HTTPS callback are configured; verify connectivity with a real provider request." if configured else "Set XDIGITEX_PAY_API_KEY and PUBLIC_BASE_URL on the server."},{"name":"identity","label":"Identity verification provider","connected":False,"detail":"Manual review only; no KYC vendor connected."}]
 def public_url(path):
     base=os.environ.get("PUBLIC_BASE_URL","").strip().rstrip("/")
     if not base:raise XPayError("PUBLIC_BASE_URL must be configured so Xdigitex Pay can call the product webhook.")
@@ -170,6 +172,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200);self.send_header("Content-Type",mime);self.send_header("Content-Length",str(len(raw)));self.send_header("Cache-Control","no-cache");self.send_header("X-Content-Type-Options","nosniff");self.end_headers();self.wfile.write(raw)
     def get_api(self,p):
         if p=="/api/health":self.reply(200,{"status":"ok","product":"Xdigitex Trade","mode":"inspection","live_execution":False});return
+        if p=="/api/market/quotes":self.reply(200,get_quotes());return
         if p=="/api/me":
             u,csrf=self.session();self.reply(200,{"user":public_user(u) if u else None,"csrf_token":csrf});return
         if p=="/api/dashboard":
@@ -190,8 +193,7 @@ class Handler(BaseHTTPRequestHandler):
                 req=c.execute("SELECT * FROM funding_requests WHERE user_id=? ORDER BY created_at DESC LIMIT 100",(u["id"],)).fetchall()
                 activity=[dict(description=r["description"],entry_type=r["entry_type"],reference=r["external_reference"],created_at=r["created_at"],amount=cash(abs(r["delta_cents"]),r["currency"]),currency=r["currency"]) for r in rows[:6]]
                 activity += [dict(description=f"{r['kind'].title()} · {r['provider_status'] or r['status']}",entry_type=r["kind"],reference=r["provider_reference"] or r["customer_reference"] or r["destination"],created_at=r["created_at"],amount=cash(r["amount_cents"],r["currency"]),currency=r["currency"],status=r["status"]) for r in req[:6]];activity.sort(key=lambda x:x["created_at"],reverse=True)
-            provider={"name":os.environ.get("BROKER_PROVIDER_LABEL","MT5"),"connected":False,"pool_type":"organization_managed","account_reference":None,"lots_traded":None,"closed_trades":None}
-            pool={"name":"Xdigitex Managed Pool","member_reference":"XDT-"+u["id"].replace("-","")[:8].upper(),"balance_source":"customer_payment_ledger","provider":provider}
+            pool={"name":"Xdigitex Internal Pool","member_reference":"XDT-"+u["id"].replace("-","")[:8].upper(),"balance_source":"customer_payment_ledger","execution_mode":"internal_price_reference","trading_enabled":False,"execution_status":"not_implemented","units_issued":False}
             self.reply(200,{"balance_by_currency":balances,"total_deposits_by_currency":totals,"total_withdrawals_by_currency":wtotal,"pending_deposits_by_currency":pend,"pending_withdrawals_by_currency":pwith,"kyc_status":u["kyc_status"],"pool":pool,"integrations":integration_status(),"ledger":ledger,"requests":[self.req_json(r) for r in req],"recent":activity[:6]});return
         if p=="/api/admin/overview":
             u,_=self.auth(True)

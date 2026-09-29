@@ -1,7 +1,7 @@
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 HOST=0.0.0.0 PORT=8080 DATA_DIR=/var/lib/xdigitex-trade
 WORKDIR /app
-COPY server.py xpay.py index.html styles.css app.js README.md ./
+COPY server.py xpay.py marketdata.py index.html styles.css app.js README.md ./
 RUN useradd --system --home-dir /app --shell /usr/sbin/nologin appuser \
     && mkdir -p /var/lib/xdigitex-trade \
     && chown -R appuser:appuser /app /var/lib/xdigitex-trade
