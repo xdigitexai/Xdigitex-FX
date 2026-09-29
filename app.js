@@ -29,8 +29,8 @@ function toast(message, kind="") {
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.className="toast",3500);
 }
 function setMessage(el,msg,ok=false){el.textContent=msg||"";el.classList.toggle("success",!!ok)}
-function showAuth(view){$("#login-view").classList.toggle("hidden",view!=="login");$("#register-view").classList.toggle("hidden",view!=="register");$("#app-view").classList.add("hidden")}
-function setSignedIn(user,csrf){currentUser=user;csrfToken=csrf||"";$("#login-view").classList.add("hidden");$("#register-view").classList.add("hidden");$("#app-view").classList.remove("hidden");$("#user-name").textContent=user.name;$("#user-role").textContent=user.role==="admin"?"Operations administrator":"Investor account";$("#user-avatar").textContent=(user.name||"X").trim().slice(0,1).toUpperCase();$("#admin-nav").classList.toggle("hidden",user.role!=="admin");$("#admin-overview").classList.toggle("hidden",user.role!=="admin");$("#admin-queue-panel").classList.toggle("hidden",user.role!=="admin");$("#kyc-notice").classList.toggle("hidden",user.role==="admin"||user.kyc_status==="verified");refreshApp()}
+function showAuth(view){$("#login-view").classList.toggle("hidden",view!=="login");$("#register-view").classList.toggle("hidden",view!=="register");$("#app-view").classList.add("hidden");if(view==="login")startMarket("landing");else stopMarket("landing")}
+function setSignedIn(user,csrf){stopMarket("landing");currentUser=user;csrfToken=csrf||"";$("#login-view").classList.add("hidden");$("#register-view").classList.add("hidden");$("#app-view").classList.remove("hidden");$("#user-name").textContent=user.name;$("#user-role").textContent=user.role==="admin"?"Operations administrator":"Investor account";$("#user-avatar").textContent=(user.name||"X").trim().slice(0,1).toUpperCase();$("#admin-nav").classList.toggle("hidden",user.role!=="admin");$("#admin-overview").classList.toggle("hidden",user.role!=="admin");$("#admin-queue-panel").classList.toggle("hidden",user.role!=="admin");$("#kyc-notice").classList.toggle("hidden",user.role==="admin"||user.kyc_status==="verified");refreshApp()}
 async function boot(){
   try { const state=await api("/api/me"); if(state.user){setSignedIn(state.user,state.csrf_token);return;} }
   catch (_) {}
@@ -84,8 +84,87 @@ function renderAdminRequests(rows){const dep=rows.filter(r=>r.kind==="deposit"&&
 function renderAdminRequestTable(rows,kind){if(!rows.length)return '<div class="activity-empty">No pending '+escapeHtml(kind)+' requests.</div>';return `<table class="data-table"><thead><tr><th>Customer</th><th>Created</th><th>Amount</th><th>${kind==="deposit"?"Gateway / provider reference":"Xdigitex Pay destination"}</th><th>Action</th></tr></thead><tbody>${rows.map(r=>`<tr><td><strong>${escapeHtml(r.user_name)}</strong><br><span class="muted">${escapeHtml(r.user_email)}</span></td><td>${fmtDate(r.created_at)}</td><td>${fmtMoney(r.amount,r.currency)}</td><td>${escapeHtml(`${r.method||"—"} · ${r.provider_reference||r.destination||"awaiting provider reference"} · ${r.provider_status||"pending"}`)}</td><td><button class="button button-secondary button-small" data-refresh="${kind}:${escapeHtml(r.id)}">Refresh</button></td></tr>`).join("")}</tbody></table>`}
 function renderAudit(rows){const el=$("#audit-table");if(!rows.length){el.innerHTML='<div class="activity-empty">No audit events recorded yet.</div>';return;}el.innerHTML=`<table class="data-table"><thead><tr><th>Time</th><th>Actor</th><th>Event</th><th>Target</th><th>Details</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${fmtDate(r.created_at)}</td><td>${escapeHtml(r.actor_email||"System")}</td><td>${escapeHtml(r.action)}</td><td>${escapeHtml(r.target_type||"—")} ${escapeHtml(r.target_id||"")}</td><td>${escapeHtml(r.summary||"—")}</td></tr>`).join("")}</tbody></table>`}
 function renderIntegrations(rows){const html=rows.map(x=>`<div><span class="readiness-icon">${x.name==="market_data"?"↗":x.name==="pool_execution"?"◉":x.name==="xdigitex_pay"?"XP":"◎"}</span><span><strong>${escapeHtml(x.label)}</strong><small>${escapeHtml(x.detail)}</small></span><span class="status-text ${x.connected?"amber-text":"red-text"}">${x.connected?"CONFIGURED":"NOT CONFIGURED"}</span></div>`).join("");$("#integration-checklist").innerHTML=html;$("#overview-integrations").innerHTML=html}
-async function renderMarketQuotes(){const el=$("#market-quotes");if(!el)return;el.innerHTML='<div class="activity-empty">Loading read-only FX reference prices…</div>';try{const d=await api("/api/market/quotes");const pill=$("#market-feed-status");if(pill){pill.textContent=d.configured?"READ-ONLY PRICE FEED":"PRICE FEED NOT CONFIGURED";pill.className=`data-source-tag ${d.configured?"":""}`}if(!d.quotes?.length){el.innerHTML=`<div class="activity-empty">${escapeHtml(d.message||"No FX prices available.")}</div>`;return}el.innerHTML=`<div class="quote-grid">${d.quotes.map(q=>`<article class="quote-card"><span>${escapeHtml(q.symbol)}</span><strong>${q.price==null?"Unavailable":Number(q.price).toLocaleString(undefined,{maximumFractionDigits:6})}</strong><small>${escapeHtml(q.label)} · ${q.status==="live"?(q.cached?"cached quote":"provider response"):escapeHtml(q.status)}${q.received_at?` · ${fmtDate(q.received_at)}`:""}</small></article>`).join("")}</div><p class="microcopy">${escapeHtml(d.message||"")}</p>`}catch(e){el.innerHTML=`<div class="activity-empty">${escapeHtml(e.message)}</div>`}}
-function showPage(page){$$('.page-section').forEach(s=>s.classList.add("hidden"));const target=$("#page-"+page);if(target)target.classList.remove("hidden");$$('.nav-item').forEach(b=>b.classList.toggle("active",b.dataset.page===page));const selected=$(`.nav-item[data-page="${page}"]`);$("#page-title").textContent=selected?selected.textContent.trim():page;$("#sidebar").classList.remove("open");if(page==="trading")renderMarketQuotes();if(page==="requests"||page==="investors"||page==="audit")refreshAdmin().catch(e=>toast(e.message,"error"));}
+const MARKET_REFRESH_MS=60000;
+const marketTimers={};
+const marketPayload={};
+let marketSymbol="EUR/USD";
+const fmtPrice=(v)=>{if(v==null||!Number.isFinite(Number(v)))return"—";const d=Math.abs(Number(v))>=100?3:5;return Number(v).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d})};
+const fmtClock=(v)=>{const d=new Date(v);return isNaN(d)?"—":d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})};
+function marketEls(scope){return{canvas:$(`.market-canvas[data-scope="${scope}"]`),tabs:$(`.market-tabs[data-scope="${scope}"]`),meta:$(`.market-meta[data-scope="${scope}"]`),status:$(`.market-status[data-scope="${scope}"]`),empty:$(`.market-empty[data-scope="${scope}"]`)}}
+function drawReferenceChart(canvas,points){
+  if(!canvas)return;
+  const box=canvas.parentElement;if(!box)return;
+  const w=Math.max(240,box.clientWidth||600),h=Math.max(150,box.clientHeight||320);
+  const ratio=Math.min(window.devicePixelRatio||1,2);
+  canvas.width=Math.round(w*ratio);canvas.height=Math.round(h*ratio);
+  const ctx=canvas.getContext("2d");if(!ctx)return;
+  ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,w,h);
+  const pts=(points||[]).filter(p=>p&&Number.isFinite(Number(p.price)));
+  if(pts.length<2)return;
+  const left=10,right=74,top=18,bottom=26,plotW=w-left-right,plotH=h-top-bottom;
+  const times=pts.map(p=>new Date(p.t).getTime()),prices=pts.map(p=>Number(p.price));
+  const t0=Math.min(...times),t1=Math.max(...times);
+  let lo=Math.min(...prices),hi=Math.max(...prices);
+  const span=(hi-lo)||Math.max(Math.abs(hi)*0.001,0.0005);
+  lo-=span*0.18;hi+=span*0.18;
+  const X=t=>t1===t0?left+plotW/2:left+((t-t0)/(t1-t0))*plotW;
+  const Y=p=>top+((hi-p)/(hi-lo))*plotH;
+  const path=pts.map((p,i)=>[X(times[i]),Y(prices[i])]);
+  const last=path[path.length-1],accent="#b8ff00";
+  const fill=ctx.createLinearGradient(0,top,0,h-bottom);fill.addColorStop(0,"rgba(184,255,0,.20)");fill.addColorStop(1,"rgba(184,255,0,0)");
+  ctx.beginPath();ctx.moveTo(path[0][0],h-bottom);path.forEach(c=>ctx.lineTo(c[0],c[1]));ctx.lineTo(last[0],h-bottom);ctx.closePath();ctx.fillStyle=fill;ctx.fill();
+  ctx.beginPath();path.forEach((c,i)=>i?ctx.lineTo(c[0],c[1]):ctx.moveTo(c[0],c[1]));ctx.lineWidth=1.8;ctx.lineJoin="round";ctx.lineCap="round";ctx.strokeStyle=accent;ctx.stroke();
+  ctx.save();ctx.setLineDash([3,4]);ctx.strokeStyle="rgba(184,255,0,.35)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(left,last[1]);ctx.lineTo(last[0],last[1]);ctx.stroke();ctx.restore();
+  ctx.beginPath();ctx.arc(last[0],last[1],3.2,0,Math.PI*2);ctx.fillStyle=accent;ctx.fill();
+  ctx.font="600 10px 'DM Sans',sans-serif";ctx.textBaseline="middle";
+  ctx.fillStyle=accent;ctx.fillText(fmtPrice(prices[prices.length-1]),Math.min(last[0]+8,w-64),last[1]);
+  ctx.fillStyle="#8d9096";ctx.textBaseline="alphabetic";
+  ctx.fillText(fmtClock(pts[0].t),left,h-8);
+  const endLabel=fmtClock(pts[pts.length-1].t);ctx.fillText(endLabel,w-right-ctx.measureText(endLabel).width,h-8);
+}
+function renderQuoteCards(payload){
+  const el=$("#market-quotes");if(!el)return;
+  const quotes=payload.quotes||[];
+  if(!quotes.length){el.innerHTML=`<div class="activity-empty">${escapeHtml(payload.message||"No FX prices available.")}</div>`;return}
+  el.innerHTML=`<div class="quote-grid">${quotes.map(q=>{const c=q.change,cls=c?(c.percent>=0?"green-text":"red-text"):"red-text";return `<article class="quote-card"><span>${escapeHtml(q.symbol)}</span><strong>${q.price==null?"Unavailable":fmtPrice(q.price)}</strong><small class="${cls}">${c?`${c.percent>0?"+":""}${c.percent.toFixed(2)}% over ${q.points.length} bars`:(q.status==="live"?"Collecting history":escapeHtml(q.status))}</small><small>${escapeHtml(q.label)} · ${escapeHtml(q.status)}${q.received_at?` · ${fmtDate(q.received_at)}`:""}</small></article>`}).join("")}</div><p class="microcopy">${escapeHtml(payload.message||"")}</p>`;
+}
+function renderMarket(scope,payload){
+  const els=marketEls(scope);if(!els.canvas)return;
+  marketPayload[scope]=payload;
+  const quotes=payload.quotes||[],usable=quotes.filter(q=>(q.points||[]).length>1);
+  if(els.status)els.status.textContent=payload.configured?(quotes.some(q=>q.status==="live")?"LIVE REFERENCE FEED":"REFERENCE FEED DEGRADED"):"PRICE FEED NOT CONFIGURED";
+  if(els.tabs){
+    if(!usable.length)els.tabs.innerHTML="";
+    else{
+      if(!usable.some(q=>q.symbol===marketSymbol))marketSymbol=usable[0].symbol;
+      els.tabs.innerHTML=usable.map(q=>`<button type="button" data-market-symbol="${escapeHtml(q.symbol)}" class="${q.symbol===marketSymbol?"active":""}">${escapeHtml(q.symbol)}</button>`).join("");
+    }
+  }
+  const active=usable.find(q=>q.symbol===marketSymbol);
+  if(!active){
+    const ctx=els.canvas.getContext("2d");if(ctx)ctx.clearRect(0,0,els.canvas.width,els.canvas.height);
+    if(els.empty){els.empty.classList.remove("hidden");els.empty.innerHTML=`<span>◷</span><strong>No live data</strong><p>${escapeHtml(payload.message||"The reference price feed returned no series.")}</p>`}
+    if(els.meta)els.meta.textContent="";
+    return;
+  }
+  if(els.empty)els.empty.classList.add("hidden");
+  drawReferenceChart(els.canvas,active.points);
+  if(els.meta){
+    const prices=active.points.map(p=>p.price),change=active.change;
+    els.meta.textContent=` · ${active.symbol} ${fmtPrice(active.price)} · ${change?`${change.percent>0?"+":""}${change.percent.toFixed(2)}%`:"0.00%"} over ${active.points.length} bars · high ${fmtPrice(Math.max(...prices))} · low ${fmtPrice(Math.min(...prices))} · provider refresh ${active.received_at?fmtClock(active.received_at):"—"}${active.cached?" (cached)":""} · next ~${payload.next_refresh_seconds||0}s`;
+  }
+}
+async function loadMarket(scope){
+  const els=marketEls(scope);if(!els.canvas)return;
+  if(!marketPayload[scope]){if(els.empty){els.empty.classList.remove("hidden");els.empty.innerHTML='<span>◷</span><strong>Loading reference prices</strong><p>Requesting read-only FX quotes.</p>'}
+    if(els.meta)els.meta.textContent="";}
+  try{const d=await api("/api/market/quotes");renderMarket(scope,d);if(scope==="terminal")renderQuoteCards(d)}catch(e){renderMarket(scope,{configured:false,quotes:[],message:e.message})}
+}
+function startMarket(scope){stopMarket(scope);loadMarket(scope);marketTimers[scope]=setInterval(()=>{if(!document.hidden)loadMarket(scope)},MARKET_REFRESH_MS)}
+function stopMarket(scope){if(marketTimers[scope]){clearInterval(marketTimers[scope]);delete marketTimers[scope]}}
+function visibleMarketScopes(){return Object.keys(marketPayload).filter(s=>{const c=marketEls(s).canvas;return c&&c.offsetParent!==null})}
+window.addEventListener("resize",()=>{visibleMarketScopes().forEach(scope=>{const payload=marketPayload[scope],canvas=marketEls(scope).canvas,active=(payload.quotes||[]).find(q=>q.symbol===marketSymbol);if(active&&(active.points||[]).length>1)drawReferenceChart(canvas,active.points)})});
+function showPage(page){$$('.page-section').forEach(s=>s.classList.add("hidden"));const target=$("#page-"+page);if(target)target.classList.remove("hidden");$$('.nav-item').forEach(b=>b.classList.toggle("active",b.dataset.page===page));const selected=$(`.nav-item[data-page="${page}"]`);$("#page-title").textContent=selected?selected.textContent.trim():page;$("#sidebar").classList.remove("open");if(page==="trading")startMarket("terminal");else stopMarket("terminal");if(page==="requests"||page==="investors"||page==="audit")refreshAdmin().catch(e=>toast(e.message,"error"));}
 function openRequest(kind){const dlg=$("#request-dialog");const dep=kind==="deposit";$("#request-title").textContent=dep?"Deposit with Xdigitex Pay":"Withdraw through Xdigitex Pay";$("#request-eyebrow").textContent=dep?"Xdigitex Pay deposit":"Xdigitex Pay withdrawal";$("#deposit-fields").classList.toggle("hidden",!dep);$("#deposit-fields").disabled=!dep;$("#withdraw-fields").classList.toggle("hidden",dep);$("#withdraw-fields").disabled=dep;$("#request-message").textContent="";dlg.dataset.kind=kind;$("#sidebar").classList.remove("open");const gateway=$("[name='gateway']");const phone=$("[name='deposit_phone']");const setPhone=()=>{phone.required=["mobile","safaricom","airtel"].includes(gateway.value)};gateway.onchange=setPhone;setPhone();const currency=dep?$("[name=deposit_currency]"):$("[name=withdraw_currency]");const amount=dep?$("[name=deposit_amount]"):$("[name=withdraw_amount]");const setStep=()=>{const d=currencyDigits[currency.value]??2;amount.step=d?`0.${"0".repeat(d-1)}1`:"1"};currency.onchange=setStep;setStep();dlg.showModal()}
 async function submitRequest(e){e.preventDefault();const form=e.currentTarget;const kind=$("#request-dialog").dataset.kind;const fd=new FormData(form);const body={};try{let d;if(kind==="deposit"){body.amount=Number(fd.get("deposit_amount"));body.currency=fd.get("deposit_currency");body.gateway=fd.get("gateway");body.phone=fd.get("deposit_phone")||"";d=await api("/api/requests/deposit",{method:"POST",body:JSON.stringify(body)});const checkout=d.redirect_url||d.checkout_url||d.qrcode_link;if(checkout){window.location.assign(checkout);return;}}else{body.amount=Number(fd.get("withdraw_amount"));body.currency=fd.get("withdraw_currency");body.phone=fd.get("withdraw_phone");d=await api("/api/requests/withdrawal",{method:"POST",body:JSON.stringify(body)});}$("#request-dialog").close();form.reset();toast(d.message||"Request submitted to Xdigitex Pay.","success");refreshApp();}catch(err){setMessage($("#request-message"),err.message)}}
 async function refreshProvider(kind,id){try{await api(`/api/admin/requests/${kind}/${id}/refresh`,{method:"POST",body:"{}"});toast("Xdigitex Pay status refreshed.","success");await refreshApp()}catch(e){toast(e.message,"error")}}
@@ -98,6 +177,6 @@ $("#register-form").addEventListener("submit",async e=>{e.preventDefault();const
 $("#show-register").addEventListener("click",()=>showAuth("register"));$("#show-login").addEventListener("click",()=>showAuth("login"));
 $("#logout-button").addEventListener("click",async()=>{try{await api("/api/auth/logout",{method:"POST",body:"{}"})}catch(_){}currentUser=null;csrfToken="";showAuth("login")});
 $("#request-form").addEventListener("submit",submitRequest);
-document.addEventListener("click",e=>{const nav=e.target.closest("[data-page]");if(nav)showPage(nav.dataset.page);const action=e.target.closest("[data-action]");if(action){if(action.dataset.action==="pool-details")openPoolDetails();else openRequest(action.dataset.action)}const goto=e.target.closest("[data-goto]");if(goto)showPage(goto.dataset.goto);const close=e.target.closest("[data-close-dialog]");if(close)$("#request-dialog").close();const closePool=e.target.closest("[data-close-pool]");if(closePool)$("#pool-details-dialog").close();const refresh=e.target.closest("[data-refresh]");if(refresh){const[k,id]=refresh.dataset.refresh.split(":");refreshProvider(k,id)}const check=e.target.closest("[data-status]");if(check)refreshOwnRequest(check.dataset.status);const filter=e.target.closest("[data-account-filter]");if(filter){accountFilter=filter.dataset.accountFilter;$$("[data-account-filter]").forEach(b=>b.classList.toggle("active",b===filter));renderAccounts(latestDashboard||{})}const layout=e.target.closest("[data-account-layout]");if(layout){accountLayout=layout.dataset.accountLayout;$$("[data-account-layout]").forEach(b=>b.classList.toggle("active",b===layout));renderAccounts(latestDashboard||{})}const kyc=e.target.closest("[data-kyc]");if(kyc)reviewKyc(kyc.dataset.kyc)});
+document.addEventListener("click",e=>{const nav=e.target.closest("[data-page]");if(nav)showPage(nav.dataset.page);const action=e.target.closest("[data-action]");if(action){if(action.dataset.action==="pool-details")openPoolDetails();else openRequest(action.dataset.action)}const goto=e.target.closest("[data-goto]");if(goto)showPage(goto.dataset.goto);const close=e.target.closest("[data-close-dialog]");if(close)$("#request-dialog").close();const closePool=e.target.closest("[data-close-pool]");if(closePool)$("#pool-details-dialog").close();const refresh=e.target.closest("[data-refresh]");if(refresh){const[k,id]=refresh.dataset.refresh.split(":");refreshProvider(k,id)}const check=e.target.closest("[data-status]");if(check)refreshOwnRequest(check.dataset.status);const filter=e.target.closest("[data-account-filter]");if(filter){accountFilter=filter.dataset.accountFilter;$$("[data-account-filter]").forEach(b=>b.classList.toggle("active",b===filter));renderAccounts(latestDashboard||{})}const layout=e.target.closest("[data-account-layout]");if(layout){accountLayout=layout.dataset.accountLayout;$$("[data-account-layout]").forEach(b=>b.classList.toggle("active",b===layout));renderAccounts(latestDashboard||{})}const kyc=e.target.closest("[data-kyc]");if(kyc)reviewKyc(kyc.dataset.kyc);const symbol=e.target.closest("[data-market-symbol]");if(symbol){marketSymbol=symbol.dataset.marketSymbol;visibleMarketScopes().forEach(s=>renderMarket(s,marketPayload[s]))}});
 $("#menu-toggle").addEventListener("click",()=>$("#sidebar").classList.toggle("open"));
 boot();

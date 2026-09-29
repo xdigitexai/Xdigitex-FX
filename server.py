@@ -10,7 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 from xpay import XDigitexPay, XPayError
-from marketdata import get_quotes, is_configured as market_data_configured
+from marketdata import get_history, get_quotes, is_configured as market_data_configured
 
 ROOT=Path(__file__).resolve().parent
 DATA_DIR=Path(os.environ.get("DATA_DIR",ROOT/"data")).resolve()
@@ -173,6 +173,7 @@ class Handler(BaseHTTPRequestHandler):
     def get_api(self,p):
         if p=="/api/health":self.reply(200,{"status":"ok","product":"Xdigitex Trade","mode":"inspection","live_execution":False});return
         if p=="/api/market/quotes":self.reply(200,get_quotes());return
+        if p=="/api/market/history":self.reply(200,get_history());return
         if p=="/api/me":
             u,csrf=self.session();self.reply(200,{"user":public_user(u) if u else None,"csrf_token":csrf});return
         if p=="/api/dashboard":

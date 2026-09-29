@@ -37,7 +37,9 @@ For an actual provider integration, configure a valid merchant API key and an HT
 
 ## Internal pool and market data
 
-The account page shows a member's payment-confirmed ledger balance. It is not trading equity, pool NAV, or an allocated number of pool units. There is no broker dependency and no external order route. The optional Twelve Data integration provides cached, read-only FX reference prices for EUR/USD, GBP/USD, USD/JPY, and USD/CHF at `/api/market/quotes`. Set `TWELVE_DATA_API_KEY` on the server to show prices; `MARKET_DATA_CACHE_SECONDS` defaults to 600 and is bounded from 60 to 3,600 seconds.
+The account page shows a member's payment-confirmed ledger balance. It is not trading equity, pool NAV, or an allocated number of pool units. There is no broker dependency and no external order route. The optional Twelve Data integration provides cached, read-only FX reference prices for EUR/USD, GBP/USD, USD/JPY, and USD/CHF at `/api/market/quotes`, together with the recent 1-minute closes behind each price. Set `TWELVE_DATA_API_KEY` on the server to show prices; `MARKET_DATA_CACHE_SECONDS` defaults to 600 and is bounded from 60 to 3,600 seconds.
+
+The landing page and the trade terminal both draw a reference price line chart from that endpoint. The chart plots provider 1-minute closes only, is labelled "not executable", and shows an explicit "no live data" state when the feed is unconfigured or unavailable. No candle, volume, or trade series is fabricated, and nothing is synthesised in the browser: the rolling window is held and refreshed server-side.
 
 Quotes do not execute orders or confirm any trade. The internal order engine, price timestamp policy, position/risk ledger, member-unit accounting, pool NAV, and settlement/reconciliation rules still need implementation. Order controls remain unavailable, and the UI does not show sample candles or estimated returns. Demo is empty and contains no fake account.
 
@@ -46,7 +48,7 @@ Quotes do not execute orders or confirm any trade. The internal order engine, pr
 - Persistent accounts, password hashing, CSRF protected state changes, sessions, administrator review, and a hash-linked audit record.
 - Multi-currency customer balances and ledgers for KES, USD, CDF, UGX, XOF, XAF, RWF, ZMW, and SLE.
 - Live provider API request code for Xdigitex Pay deposits and mobile-money withdrawals. The payment status is shown as configured only when the server key and public callback base URL are present; a real provider request is still needed to verify live connectivity.
-- Optional read-only FX price requests through Twelve Data, centrally cached for all users. The data key remains server-side, and the quotes are never represented as order execution.
+- Optional read-only FX price requests through Twelve Data, centrally cached for all users. The data key remains server-side, the trend window is kept on the server, and the prices are never represented as order execution.
 - Deposit credits and withdrawal debits require an authenticated Xdigitex Pay status response and exact reference/amount/currency checks.
 
 ## What still needs real setup
@@ -60,7 +62,8 @@ Quotes do not execute orders or confirm any trade. The internal order engine, pr
 
 - `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/me`
 - `GET /api/dashboard`, `POST /api/requests/deposit`, `POST /api/requests/withdrawal`
-- `GET /api/market/quotes` — optional cached read-only FX prices; never executes trades
+- `GET /api/market/quotes` — optional cached read-only FX prices plus their recent 1-minute closes; never executes trades
+- `GET /api/market/history` — optional cached read-only FX trend series for the reference charts
 - `GET /api/requests/{id}/status` — authenticated refresh against Xdigitex Pay
 - `POST /api/payments/webhook` — provider callback; server confirms status with authenticated provider API
 - `GET /api/admin/overview`, `POST /api/admin/requests/{deposit|withdrawal}/{id}/refresh`
