@@ -44,4 +44,4 @@ body{background:var(--bg)}
 .market-tabs{flex-wrap:wrap;gap:4px}
 .market-tabs button{white-space:nowrap}
 .market-meta{color:#8d9096}
-@media(max-width:760px){.login-stack{gap:14px}.landing-market{border-radius:12px}.market-tabs button{padding:6px 7px}}
+@media(max-width:760px){.login-stack{gap:14px}.landing-market{border-radius:12px}.market-tabs button{padding:6px 7px}.market-status{order:3}}
